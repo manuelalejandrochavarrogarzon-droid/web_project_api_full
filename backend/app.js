@@ -1,41 +1,62 @@
-const mongoose = require('mongoose');
-const express = require('express');
-const { errors } = require('celebrate');
+const mongoose = require("mongoose");
+const express = require("express");
+const cors = require("cors");
+const { errors } = require("celebrate");
 
-const usersRouter = require('./routes/users');
-const cardsRouter = require('./routes/cards');
+const usersRouter = require("./routes/users");
+const cardsRouter = require("./routes/cards");
 
-const { login, createUser } = require('./controllers/users');
+const { login, createUser } = require("./controllers/users");
 
-const auth = require('./middlewares/auth');
+const auth = require("./middlewares/auth");
 
-const { validateSignup, validateSignin } = require('./middlewares/validation');
+const { validateSignup, validateSignin } = require("./middlewares/validation");
 
-const { requestLogger, errorLogger } = require('./middlewares/logger');
+const { requestLogger, errorLogger } = require("./middlewares/logger");
 
 const app = express();
 
-mongoose.connect('mongodb://localhost:27017/aroundb');
+mongoose
+  .connect("mongodb://localhost:27017/aroundb")
+  .then(() => {
+    console.log("Conexión con MongoDB establecida");
+  })
+  .catch((error) => {
+    console.error("Error al conectar con MongoDB:", error);
+  });
 
 const { PORT = 3000 } = process.env;
 
+// Configuración de CORS.
+// En Express 5, cors() ya gestiona las solicitudes OPTIONS.
+app.use(cors());
+
+// Interpretar solicitudes JSON.
 app.use(express.json());
 
 // Registrar todas las solicitudes HTTP.
 app.use(requestLogger);
 
-// Rutas públicas con validación.
-app.post('/signup', validateSignup, createUser);
-app.post('/signin', validateSignin, login);
+// Ruta temporal para comprobar el reinicio automático del servidor.
+// Debe eliminarse cuando el proyecto haya sido revisado y aprobado.
+app.get("/crash-test", () => {
+  setTimeout(() => {
+    throw new Error("El servidor va a caer");
+  }, 0);
+});
+
+// Rutas públicas.
+app.post("/signup", validateSignup, createUser);
+app.post("/signin", validateSignin, login);
 
 // Proteger las demás rutas mediante JWT.
 app.use(auth);
 
 // Rutas protegidas.
-app.use('/users', usersRouter);
-app.use('/cards', cardsRouter);
+app.use("/users", usersRouter);
+app.use("/cards", cardsRouter);
 
-// Registrar los errores antes de que los gestione el middleware central.
+// Registrar los errores.
 app.use(errorLogger);
 
 // Manejo de errores de validación de Celebrate.
@@ -44,7 +65,7 @@ app.use(errors());
 // Recurso no encontrado.
 app.use((req, res) => {
   res.status(404).json({
-    message: 'Recurso solicitado no encontrado',
+    message: "Recurso solicitado no encontrado",
   });
 });
 
@@ -54,7 +75,7 @@ app.use((error, req, res, next) => {
   const statusCode = error.statusCode || 500;
 
   res.status(statusCode).json({
-    message: statusCode === 500 ? 'Error interno del servidor' : error.message,
+    message: statusCode === 500 ? "Error interno del servidor" : error.message,
   });
 });
 

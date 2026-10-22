@@ -86,7 +86,7 @@ class Api {
 }
 
 const api = new Api({
-  baseUrl: "http://localhost:3000",
+  baseUrl: "https://tripleten19.chickenkiller.com/api",
 });
 
 export default api;
